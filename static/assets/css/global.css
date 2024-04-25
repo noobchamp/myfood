@@ -1,0 +1,13 @@
+.ingredient-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ingredient-item input[type="number"] {
+    width: 100px; 
+}
+
+.unit-select {
+    width: 120px; 
+}

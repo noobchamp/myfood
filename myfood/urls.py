@@ -21,9 +21,10 @@ from django.conf.urls.i18n import i18n_patterns
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
+    path('recipes/', include('recipes.urls')),
 ]
 
 urlpatterns += i18n_patterns(
-    path('recipes', include('recipes.urls')),
+    
     # Otros patrones de URL que deseas traducir
 )

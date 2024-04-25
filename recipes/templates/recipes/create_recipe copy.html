@@ -1,0 +1,195 @@
+{% extends 'core/base.html' %}
+{% block title %}Recipes{% endblock %}
+{% block header %}RECETAS{% endblock %}
+{% block subtitle %}{% endblock %}
+{% block content %}
+<section>
+    <h3>Nueva Receta</h3>
+    <form id="recipe-form" method="post" action="{% url 'create_recipe' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row gtr-uniform">
+            <div class="col-8">
+                <input type="text" name="title" id="title" value="" placeholder="Título" />
+            </div>
+            <!-- Descripción de la receta -->
+            <div class="col-8">
+                <textarea name="description" id="description" placeholder="Descripción de la receta" rows="4"></textarea>
+            </div>
+            <!-- Subir fotos -->
+            <div class="col-12">
+                <ul class="actions">
+                    <li>
+                        <div class="button primary icon solid fa-camera" id="camera-btn">Foto</div>
+                        <div id="image-preview" style="display: none; width: 100px; height: 100px; background-size: cover;"></div>
+                    </li>
+                    <input type="file" name="file" id="file-input" style="display: none;">
+                </ul>                
+            </div>
+            <div class="col-8">
+                <h4>Ingredientes:</h4>
+                <div id="ingredient-container">
+                    <div class="ingredient-item">
+                    </div>
+                </div>
+            </div>    
+            <div class="col-12">
+                <button type="button" class="button" onclick="addIngredient()">Agregar Ingrediente</button>
+            </div>               
+            <div id="steps-container" class="col-8">
+                <h4>Pasos a seguir para elaborar esta deliciosa receta:</h4>
+                <div class="step">
+                    <input type="text" name="step[]" placeholder="Paso 1" />
+                    <button type="button" class="button primary small delete-step" onclick="removeStep(this)"><i class="fa fa-trash"></i></button>
+                    <button type="button" class="button small move-up" onclick="moveStepUp(this)"><i class="fa fa-arrow-up"></i></button>
+                    <button type="button" class="button small move-down" onclick="moveStepDown(this)"><i class="fa fa-arrow-down"></i></button>
+                </div>
+            </div>
+            <div class="col-12">
+                <button type="button" onclick="addStep()">Agregar Paso</button>
+                <input type="reset" value="Reset" onclick="resetSteps()" />
+            </div>
+            <div class="col-12">
+                <button type="su" class="button primary large">Guardar Receta</button>
+            </div>
+        </div>
+    </form>    
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+    document.getElementById('camera-btn').addEventListener('click', function() {
+        document.getElementById('file-input').click();
+    });
+
+    document.getElementById('file-input').addEventListener('change', function() {
+        const file = this.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const filename = file.name;
+                const preview = e.target.result;
+                document.getElementById('camera-btn').innerText = filename;
+                const imagePreview = document.getElementById('image-preview');
+                imagePreview.style.backgroundImage = `url('${preview}')`;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert('Por favor, seleccione un archivo de imagen válido.');
+            this.value = ''; // Vaciar el campo de entrada de archivos para que el usuario pueda seleccionar otro archivo
+            document.getElementById('camera-btn').innerText = 'Foto';
+            document.getElementById('image-preview').style.display = 'none';
+        }
+    });
+
+    function addIngredient() {
+        const ingredientListItem = document.createElement('div');
+        ingredientListItem.classList.add('ingredient-item');
+    
+        const quantityInput = document.createElement('input');
+        quantityInput.type = 'number';
+        quantityInput.placeholder = 'Cant.';
+        quantityInput.min = 1; // Valor mínimo permitido
+        quantityInput.max = 100000; // Valor máximo permitido
+        quantityInput.classList.add('quantity-input');
+    
+        const unitSelect = document.createElement('select');
+        const units = JSON.parse('{{ units|safe }}'); // Convertir el JSON de unidades a un array de JavaScript
+        units.forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit;
+            option.textContent = unit;
+            unitSelect.appendChild(option);
+            unitSelect.classList.add('unit-select');
+        });
+    
+        const ingredientInput = document.createElement('input');
+        ingredientInput.type = 'text';
+        ingredientInput.placeholder = 'Ingrediente';
+    
+        ingredientListItem.appendChild(quantityInput);
+        ingredientListItem.appendChild(unitSelect);
+        ingredientListItem.appendChild(ingredientInput);
+    
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.classList.add('button','primary','small','remove-ingredient');
+        removeButton.innerHTML = '<i class="fa fa-trash"></i>'; // Agregar el ícono de la papelera
+        removeButton.onclick = function() {
+            ingredientListItem.remove();
+        };
+    
+        ingredientListItem.appendChild(removeButton);
+    
+        const ingredientContainer = document.getElementById('ingredient-container');
+        ingredientContainer.appendChild(ingredientListItem);
+    }
+    
+    function addStep() {
+        const stepsContainer = document.getElementById('steps-container');
+        const stepNumber = stepsContainer.children.length + 1;
+        const newStep = document.createElement('div');
+        newStep.classList.add('step');
+        newStep.innerHTML = `
+            <input type="text" name="step[]" placeholder="Paso ${stepNumber}" />
+            <button type="button" class="button primary small delete-step" onclick="removeStep(this)"><i class="fa fa-trash"></i></button>
+            <button type="button" class="button small move-up" onclick="moveStepUp(this)"><i class="fa fa-arrow-up"></i></button>
+            <button type="button" class="button small move-down" onclick="moveStepDown(this)"><i class="fa fa-arrow-down"></i></button>
+        `;
+        stepsContainer.appendChild(newStep);
+        updateStepNumbers();
+        updateStepArrows();
+    }
+    
+    function removeStep(button) {
+        button.parentElement.remove();
+        updateStepNumbers();
+        updateStepArrows();
+    }
+    
+    function moveStepUp(button) {
+        const currentStep = button.parentElement;
+        const previousStep = currentStep.previousElementSibling;
+        if (previousStep) {
+            currentStep.parentNode.insertBefore(currentStep, previousStep);
+            updateStepNumbers();
+            updateStepArrows();
+        }
+    }
+    
+    function moveStepDown(button) {
+        const currentStep = button.parentElement;
+        const nextStep = currentStep.nextElementSibling;
+        if (nextStep) {
+            currentStep.parentNode.insertBefore(nextStep, currentStep);
+            updateStepNumbers();
+            updateStepArrows();
+        }
+    }
+    
+    function resetSteps() {
+        const stepsContainer = document.getElementById('steps-container');
+        stepsContainer.innerHTML = '';
+    }
+
+    function updateStepNumbers() {
+        const steps = document.querySelectorAll('.step');
+        steps.forEach((step, index) => {
+            step.querySelector('input').placeholder = `Paso ${index + 1}`;
+        });
+    }
+
+    function updateStepArrows() {
+        const steps = document.querySelectorAll('.step');
+        steps.forEach(step => {
+            const moveUpButton = step.querySelector('.move-up');
+            const moveDownButton = step.querySelector('.move-down');
+            moveUpButton.style.display = 'inline-block';
+            moveDownButton.style.display = 'inline-block';
+        });
+        steps[0].querySelector('.move-up').style.display = 'none';
+        steps[steps.length - 1].querySelector('.move-down').style.display = 'none';
+    }
+
+</script>
+{% endblock %}
