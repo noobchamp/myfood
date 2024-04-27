@@ -1,21 +1,26 @@
-# Usa la imagen base de Python
-FROM python:3.9-slim
+# For more information, please refer to https://aka.ms/vscode-docker-python
+FROM python:3.12-slim
 
-# Establece la variable de entorno PYTHONUNBUFFERED en 1
-# Esto evita que Python haga buffering de la salida, lo que es útil para la salida de registro
-ENV PYTHONUNBUFFERED 1
+EXPOSE 8000
 
-# Establece el directorio de trabajo en /app
+RUN apt-get update \
+    && apt-get -y install libpq-dev gcc \
+    && pip install psycopg2 \
+    && pip install gunicorn
+
+# Keeps Python from generating .pyc files in the container
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Turns off buffering for easier container logging
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
+COPY . /app
 
-# Copia el archivo requirements.txt al contenedor en /app
-COPY requirements.txt /app/
+# Install pip requirements
+RUN python -m pip install -r requirements.txt
 
-# Instala las dependencias del proyecto
-RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8000
 
-# Copia todo el contenido del directorio actual al directorio de trabajo (/app) en el contenedor
-COPY . /app/
-
-# Comando para iniciar Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "nombre_del_proyecto.wsgi:application"]
+# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "myfood.wsgi:aplication"]
