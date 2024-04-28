@@ -4,7 +4,7 @@ FROM python:3.12-slim
 EXPOSE 8000
 
 RUN apt-get update \
-    && apt-get -y install libpq-dev gcc \
+    && apt-get -y install libpq-dev gcc curl \
     && pip install psycopg2 \
     && pip install gunicorn
 
